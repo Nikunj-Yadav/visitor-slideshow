@@ -1,0 +1,25 @@
+# Memory Wall - Apache settings for the public folder (works in XAMPP out of the box)
+Options -Indexes
+DirectoryIndex index.php
+
+# Upload limits (php.ini defaults can be too small on some servers). The app enforces its own, lower limit.
+<IfModule mod_php.c>
+  php_value upload_max_filesize 12M
+  php_value post_max_size 16M
+  php_value max_file_uploads 20
+  php_flag display_errors off
+</IfModule>
+<IfModule mod_php8.c>
+  php_value upload_max_filesize 12M
+  php_value post_max_size 16M
+  php_value max_file_uploads 20
+  php_flag display_errors off
+</IfModule>
+
+# Unknown addresses show the friendly 404 page (skipped if mod_rewrite is not enabled)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ 404.php [L]
+</IfModule>

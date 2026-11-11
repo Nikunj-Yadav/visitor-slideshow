@@ -5,7 +5,7 @@
   $('search-icon').innerHTML = App.icon('search');
   let tab = 'photos', timer;
   const SORTS = { photos: [['newest', 'Newest first'], ['oldest', 'Oldest first'], ['name', 'Visitor name'], ['size', 'Largest first']], visitors: [['newest', 'Newest first'], ['name', 'Name'], ['photos', 'Most photos']] };
-  const guard = (e) => { if (e.status === 401) location.href = '/admin/login'; else App.toast(e.message, 'error'); };
+  const guard = (e) => { if (e.status === 401) location.href = 'admin/login.php'; else App.toast(e.message, 'error'); };
 
   function setTab(t) {
     tab = t;
@@ -22,7 +22,7 @@
     const qs = new URLSearchParams({ q: $('q').value, sort: $('sort').value });
     if (tab === 'photos' && $('status').value) qs.set('status', $('status').value);
     try {
-      const data = await App.api(`/api/admin/${tab}?${qs}`);
+      const data = await App.api(`api/admin/${tab}.php?${qs}`);
       tab === 'photos' ? renderPhotos(data.photos) : renderVisitors(data.visitors);
     } catch (e) { guard(e); }
   }
@@ -45,11 +45,11 @@
       const badge = document.createElement('span'); badge.className = 'badge ' + (p.status === 'approved' ? 'badge--ok' : 'badge--warn'); badge.textContent = p.status === 'approved' ? 'On display' : 'Hidden';
       const acts = document.createElement('div'); acts.className = 'row';
       const tog = document.createElement('button'); tog.className = 'btn btn--sm'; tog.innerHTML = App.icon(p.status === 'approved' ? 'eyeoff' : 'eye') + (p.status === 'approved' ? ' Hide' : ' Show');
-      tog.onclick = async () => { try { await App.api(`/api/admin/photos/${p.id}/status`, { method: 'POST', body: { status: p.status === 'approved' ? 'hidden' : 'approved' } }); App.toast(p.status === 'approved' ? 'Photo hidden from the display.' : 'Photo is back on the display.', 'success'); load(); } catch (e) { guard(e); } };
+      tog.onclick = async () => { try { await App.api('api/admin/photo-status.php', { method: 'POST', body: { id: p.id, status: p.status === 'approved' ? 'hidden' : 'approved' } }); App.toast(p.status === 'approved' ? 'Photo hidden from the display.' : 'Photo is back on the display.', 'success'); load(); } catch (e) { guard(e); } };
       const del = document.createElement('button'); del.className = 'btn btn--sm btn--danger'; del.setAttribute('aria-label', `Delete photo by ${p.name}`); del.innerHTML = App.icon('trash');
       del.onclick = async () => {
         if (!await App.confirm({ title: 'Delete this photo?', message: 'The file is removed permanently and cannot be recovered.', confirmText: 'Delete photo', danger: true })) return;
-        try { await App.api(`/api/admin/photos/${p.id}`, { method: 'DELETE' }); App.toast('Photo deleted.', 'success'); load(); } catch (e) { guard(e); }
+        try { await App.api('api/admin/photo-delete.php', { method: 'POST', body: { id: p.id } }); App.toast('Photo deleted.', 'success'); load(); } catch (e) { guard(e); }
       };
       acts.append(tog, del); row.append(badge, acts);
       card.append(img, meta, row); grid.appendChild(card);
@@ -71,7 +71,7 @@
       const del = document.createElement('button'); del.className = 'btn btn--sm btn--danger'; del.innerHTML = App.icon('trash') + ' Delete'; del.setAttribute('aria-label', `Delete visitor ${v.name}`);
       del.onclick = async () => {
         if (!await App.confirm({ title: `Delete ${v.name}?`, message: `This removes the visitor and their ${v.photos} photo${v.photos === 1 ? '' : 's'} permanently. Use this for removal requests.`, confirmText: 'Delete visitor', danger: true })) return;
-        try { await App.api(`/api/admin/visitors/${v.id}`, { method: 'DELETE' }); App.toast('Visitor deleted.', 'success'); load(); } catch (e) { guard(e); }
+        try { await App.api('api/admin/visitor-delete.php', { method: 'POST', body: { id: v.id } }); App.toast('Visitor deleted.', 'success'); load(); } catch (e) { guard(e); }
       };
       td.appendChild(del); tr.appendChild(td); body.appendChild(tr);
     }

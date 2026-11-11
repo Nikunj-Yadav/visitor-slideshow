@@ -1,11 +1,14 @@
-<!doctype html>
+<?php
+require __DIR__ . '/../includes/bootstrap.php';
+?><!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Live slideshow · Memory Wall</title>
+  <base href="<?= h(base_url()) ?>">
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/css/slideshow.css">
+  <link rel="stylesheet" href="css/slideshow.css">
 </head>
 <body>
   <main class="stage" id="stage" aria-live="off">
@@ -20,6 +23,6 @@
   <button class="fs" id="fs" aria-label="Toggle full screen" title="Full screen (F)">
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
   </button>
-  <script src="/js/slideshow.js"></script>
+  <script src="js/slideshow.js"></script>
 </body>
 </html>

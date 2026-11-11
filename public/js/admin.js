@@ -2,11 +2,11 @@
 (async function () {
   const $ = (id) => document.getElementById(id);
   App.mountNav('dashboard', 'admin');
-  const guard = (e) => { if (e.status === 401) location.href = '/admin/login'; else App.toast(e.message, 'error'); };
+  const guard = (e) => { if (e.status === 401) location.href = 'admin/login.php'; else App.toast(e.message, 'error'); };
 
   async function load() {
     let s;
-    try { s = await App.api('/api/admin/stats'); } catch (e) { return guard(e); }
+    try { s = await App.api('api/admin/stats.php'); } catch (e) { return guard(e); }
     const cards = [['Visitors', s.visitors], ['Photos on display', s.approvedPhotos], ['Hidden photos', s.hiddenPhotos], ['Added in 24 hours', s.last24h], ['Storage used', App.fmtBytes(s.storageBytes)]];
     $('stats').innerHTML = '';
     for (const [cap, num] of cards) {
@@ -34,7 +34,7 @@
   $('settings').addEventListener('submit', async (e) => {
     e.preventDefault(); $('serror').hidden = true;
     try {
-      await App.api('/api/admin/settings', { method: 'PUT', body: { durationSeconds: Number($('duration').value), showNames: $('shownames').checked } });
+      await App.api('api/admin/settings.php', { method: 'POST', body: { durationSeconds: Number($('duration').value), showNames: $('shownames').checked } });
       App.toast('Settings saved. The display updates automatically.', 'success');
     } catch (err) { if (err.status === 401) return guard(err); $('serror').textContent = err.message; $('serror').hidden = false; }
   });

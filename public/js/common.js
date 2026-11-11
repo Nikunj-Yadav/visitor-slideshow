@@ -43,8 +43,12 @@
   // ---------- API helper: JSON in, JSON out, readable errors ----------
   async function api(url, { method = 'GET', body } = {}) {
     let res;
+    const headers = {};
+    if (body) headers['Content-Type'] = 'application/json';
+    const csrf = document.querySelector('meta[name="csrf-token"]');   // admin pages only
+    if (csrf && method !== 'GET') headers['X-CSRF-Token'] = csrf.content;
     try {
-      res = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined });
+      res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
     } catch (e) { throw new Error('Cannot reach the server. Check your connection and try again.'); }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { const err = new Error(data.error || 'Something went wrong.'); err.status = res.status; err.data = data; throw err; }
@@ -85,12 +89,12 @@
   // ---------- Navigation ----------
   function mountNav(active, mode = 'visitor') {
     const links = mode === 'admin'
-      ? [['dashboard', '/admin', 'dash', 'Dashboard'], ['manage', '/admin/manage', 'list', 'Manage'], ['slideshow', '/slideshow', 'play', 'Slideshow']]
-      : [['share', '/', 'upload', 'Share photos'], ['mine', '/my-photos', 'image', 'My photos'], ['slideshow', '/slideshow', 'play', 'Slideshow']];
+      ? [['dashboard', 'admin/index.php', 'dash', 'Dashboard'], ['manage', 'admin/manage.php', 'list', 'Manage'], ['slideshow', 'slideshow.php', 'play', 'Slideshow']]
+      : [['share', 'index.php', 'upload', 'Share photos'], ['mine', 'my-photos.php', 'image', 'My photos'], ['slideshow', 'slideshow.php', 'play', 'Slideshow']];
     const nav = document.createElement('nav');
     nav.className = 'nav'; nav.setAttribute('aria-label', 'Main');
     nav.innerHTML = `
-      <a class="brand" href="${mode === 'admin' ? '/admin' : '/'}">${icon('logo')}<span>Memory Wall</span></a>
+      <a class="brand" href="${mode === 'admin' ? 'admin/index.php' : 'index.php'}">${icon('logo')}<span>Memory Wall</span></a>
       <button class="icon-btn" id="menu-toggle" aria-label="Open menu" aria-expanded="false">${icon('menu')}</button>
       <div class="nav-links" id="nav-links">
         ${links.map(([id, href, ic, label]) => `<a href="${href}" ${id === active ? 'aria-current="page"' : ''}>${icon(ic)}<span>${label}</span></a>`).join('')}
@@ -109,13 +113,13 @@
     });
     const mt = nav.querySelector('#menu-toggle');
     mt.addEventListener('click', () => { const open = nav.classList.toggle('open'); mt.setAttribute('aria-expanded', open); mt.innerHTML = icon(open ? 'close' : 'menu'); });
-    nav.querySelector('#signout')?.addEventListener('click', async () => { await api('/api/admin/logout', { method: 'POST' }); location.href = '/admin/login'; });
+    nav.querySelector('#signout')?.addEventListener('click', async () => { await api('api/admin/logout.php', { method: 'POST' }); location.href = 'admin/login.php'; });
   }
 
   const footer = (admin = false) => {
     const f = document.createElement('footer');
     f.className = 'footer';
-    f.innerHTML = admin ? '' : '<a href="/admin">Staff sign in</a>';
+    f.innerHTML = admin ? '' : '<a href="admin/index.php">Staff sign in</a>';
     document.body.appendChild(f);
   };
 

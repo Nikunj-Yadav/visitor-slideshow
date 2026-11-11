@@ -5,7 +5,7 @@
   let data = null;
   try { data = JSON.parse(sessionStorage.getItem('mw_result')); } catch (e) { /* none */ }
   if (!data) {
-    main.innerHTML = `<div class="card empty">${App.icon('image')}<h3>Nothing to show yet</h3><p>Upload some photos and your result will appear here.</p><a class="btn btn--primary" href="/">Share photos</a></div>`;
+    main.innerHTML = `<div class="card empty">${App.icon('image')}<h3>Nothing to show yet</h3><p>Upload some photos and your result will appear here.</p><a class="btn btn--primary" href="index.php">Share photos</a></div>`;
     return;
   }
   const done = data.results.filter((r) => r.state === 'done').length;
@@ -20,9 +20,9 @@
     </section>
     <section class="card" id="problems" hidden><h2>Needs attention</h2><ul class="list" id="plist"></ul></section>
     <div class="row">
-      <a class="btn btn--primary" href="/slideshow">Watch the slideshow</a>
-      <a class="btn" href="/my-photos">My photos</a>
-      <a class="btn" href="/">Add more</a>
+      <a class="btn btn--primary" href="slideshow.php">Watch the slideshow</a>
+      <a class="btn" href="my-photos.php">My photos</a>
+      <a class="btn" href="index.php">Add more</a>
     </div>`;
   const $ = (id) => document.getElementById(id);
   $('h').textContent = done ? (done === 1 ? 'Your photo is on the wall' : `${done} photos are on the wall`) : 'No photos were added';

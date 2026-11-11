@@ -9,7 +9,7 @@
     const err = $('error'); err.hidden = true;
     code = $('code').value.trim();
     try {
-      const v = await App.api('/api/visitor/lookup', { method: 'POST', body: { code } });
+      const v = await App.api('api/visitor-lookup.php', { method: 'POST', body: { code } });
       localStorage.setItem('mw_code', code);
       render(v);
     } catch (e) { err.textContent = e.message; err.hidden = false; $('result').hidden = true; }
@@ -21,7 +21,7 @@
     const head = document.createElement('div'); head.className = 'row row--between';
     const h = document.createElement('h2'); h.textContent = `Welcome back, ${v.name}`;
     const actions = document.createElement('div'); actions.className = 'row';
-    actions.innerHTML = `<a class="btn" href="/">${App.icon('upload')} Add photos</a><button class="btn btn--danger" id="withdraw">${App.icon('shield')} Withdraw consent</button>`;
+    actions.innerHTML = `<a class="btn" href="index.php">${App.icon('upload')} Add photos</a><button class="btn btn--danger" id="withdraw">${App.icon('shield')} Withdraw consent</button>`;
     head.append(h, actions); r.appendChild(head);
     const info = document.createElement('p'); info.className = 'muted'; info.style.margin = '8px 0 24px';
     info.textContent = `${v.photos.length} of ${v.maxPhotosPerVisitor} photos. Photos marked “Hidden” were paused by a staff member.`;
@@ -39,7 +39,7 @@
         const del = document.createElement('button'); del.className = 'btn btn--sm btn--danger'; del.innerHTML = App.icon('trash') + ' Remove';
         del.onclick = async () => {
           if (!await App.confirm({ title: 'Remove this photo?', message: 'It will disappear from the display and be deleted permanently.', confirmText: 'Remove photo', danger: true })) return;
-          try { await App.api('/api/visitor/photo/delete', { method: 'POST', body: { code, photoId: p.id } }); App.toast('Photo removed.', 'success'); load(); }
+          try { await App.api('api/visitor-photo-delete.php', { method: 'POST', body: { code, photoId: p.id } }); App.toast('Photo removed.', 'success'); load(); }
           catch (e) { App.toast(e.message, 'error'); }
         };
         row.append(badge, del); c.append(img, row); grid.appendChild(c);
@@ -48,7 +48,7 @@
     }
     $('withdraw').onclick = async () => {
       if (!await App.confirm({ title: 'Withdraw consent?', message: 'All your photos, your name and your code will be permanently deleted. This cannot be undone.', confirmText: 'Delete everything', danger: true })) return;
-      try { await App.api('/api/visitor/withdraw', { method: 'POST', body: { code } }); localStorage.removeItem('mw_code'); $('code').value = ''; r.hidden = true; App.toast('Your photos and details have been deleted.', 'success'); }
+      try { await App.api('api/visitor-withdraw.php', { method: 'POST', body: { code } }); localStorage.removeItem('mw_code'); $('code').value = ''; r.hidden = true; App.toast('Your photos and details have been deleted.', 'success'); }
       catch (e) { App.toast(e.message, 'error'); }
     };
   }

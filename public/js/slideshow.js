@@ -1,5 +1,6 @@
 /* Live slideshow.
-   - Fetches the approved photo list, then listens for "photos-changed" events (Server-Sent Events).
+   - Fetches the approved photo list, then asks the server every 3 seconds "did anything change?"
+     (a tiny request that carries the last version number it saw).
    - New photos jump the queue so they show next; otherwise photos play in upload order and loop.
    - Two stacked <img> layers cross-fade. The next image is fully loaded before the fade starts. */
 (function () {
@@ -7,13 +8,19 @@
   const layers = [$('img-a'), $('img-b')];
   let front = 0;                 // index of the layer currently visible
   let photos = [], seen = null, priority = [], pos = -1, currentId = null;
-  let durationMs = 8000, timer = null, failures = 0;
+  let durationMs = 8000, timer = null, failures = 0, version = null;
 
-  $('where').textContent = location.host + '/';
+  $('where').textContent = new URL('index.php', document.baseURI).href.replace(/^https?:\/\//, '');
 
   async function refresh() {
     let data;
-    try { data = await (await fetch('/api/slideshow', { cache: 'no-store' })).json(); } catch (e) { return; } // keep playing on network errors
+    try {
+      const res = await fetch('api/slideshow.php' + (version !== null ? `?since=${version}` : ''), { cache: 'no-store' });
+      if (!res.ok) return;                                                // keep playing on server errors
+      data = await res.json();
+    } catch (e) { return; }                                               // keep playing on network errors
+    if (data.unchanged) return;                                           // nothing new since last check
+    version = data.version;
     durationMs = Math.min(120, Math.max(3, data.settings.durationSeconds)) * 1000;
     const ids = new Set(data.photos.map((p) => p.id));
     if (seen === null) seen = new Set(ids);                              // first load: nothing is "new"
@@ -57,9 +64,7 @@
   }
 
   // ---------- Live updates ----------
-  const es = new EventSource('/api/events');
-  es.addEventListener('photos-changed', refresh);
-  setInterval(refresh, 60000);                                            // safety net if the live connection drops
+  setInterval(refresh, 3000);                                             // polling: simple and reliable on XAMPP/Apache
   refresh();
 
   // ---------- Small conveniences for a TV / kiosk ----------

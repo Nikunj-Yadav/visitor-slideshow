@@ -1,15 +1,7 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Share your photos · Memory Wall</title>
-  <meta name="description" content="Upload photos and watch them appear on the live display.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%2317687a'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/css/app.css">
-  <script src="/js/common.js"></script>
-</head>
-<body>
+<?php
+require __DIR__ . '/../includes/bootstrap.php';
+page_head('Share your photos', ['description' => 'Upload photos and watch them appear on the live display.']);
+?>
   <main class="page page--narrow">
     <header class="page-header">
       <h1>Share your photos</h1>
@@ -59,6 +51,4 @@
       </div>
     </form>
   </main>
-  <script src="/js/upload.js"></script>
-</body>
-</html>
+<?php page_foot('upload.js'); ?>

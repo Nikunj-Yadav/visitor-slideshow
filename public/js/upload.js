@@ -5,7 +5,7 @@
   App.mountNav('share'); App.footer();
   $('drop-icon').innerHTML = App.icon('upload', 'icon--lg');
 
-  const cfg = await App.api('/api/config');
+  const cfg = await App.api('api/config.php');
   $('limits').textContent = `JPG, PNG or WebP · up to ${cfg.maxFileMb} MB each · ${cfg.maxPhotosPerVisitor} photos per visitor`;
 
   let mode = 'new';          // 'new' or 'return'
@@ -30,7 +30,7 @@
   if (savedCode) {
     $('code').value = savedCode;
     setMode('return');
-    App.api('/api/visitor/lookup', { method: 'POST', body: { code: savedCode } })
+    App.api('api/visitor-lookup.php', { method: 'POST', body: { code: savedCode } })
       .then((v) => { $('welcome').textContent = `Welcome back, ${v.name}. You have ${v.photos.length} photo${v.photos.length === 1 ? '' : 's'} on the wall.`; })
       .catch(() => { localStorage.removeItem('mw_code'); $('code').value = ''; $('welcome').textContent = 'That saved code is no longer valid. Enter your code or start as a new visitor.'; });
   }
@@ -85,9 +85,9 @@
       const fd = new FormData();
       for (const [k, v] of Object.entries(fields)) if (v) fd.set(k, v);
       fd.set('consent', 'true');
-      fd.append('photos', it.file);
+      fd.append('photos[]', it.file);
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/api/upload');
+      xhr.open('POST', 'api/upload.php');
       xhr.responseType = 'json';
       xhr.upload.onprogress = (e) => { if (e.lengthComputable) { it.loaded = e.loaded; updateOverall(); } };
       xhr.onload = () => resolve({ status: xhr.status, body: xhr.response || {} });
@@ -151,7 +151,7 @@
       results: queue.map((i) => ({ name: i.file.name, state: i.state, text: i.text })),
     }));
     queue.forEach((i) => URL.revokeObjectURL(i.url));
-    location.href = '/status';
+    location.href = 'status.php';
   });
   refresh();
 })();
