@@ -60,6 +60,7 @@
     for (const it of items) {
       const t = document.createElement('div'); t.className = 'tile';
       const img = document.createElement('img'); img.src = it.url; img.alt = `Preview of ${it.file.name}`;
+      img.onerror = () => { img.alt = ''; img.classList.add('is-broken'); }; // file the browser cannot draw; the server will report it
       const name = document.createElement('div'); name.className = 'name'; name.textContent = it.file.name;
       t.append(img, name);
       if (it.state === 'ready' && !busy) {
