@@ -1,6 +1,11 @@
-node_modules/
+# secrets and local settings
+config/config.local.php
 .env
-data/*
-!data/.gitkeep
+# private visitor photos (the folder itself is kept by .gitkeep and .htaccess)
+uploads/*
+!uploads/.gitkeep
+!uploads/.htaccess
+# test tooling
+tests/e2e/node_modules/
 *.zip
 .DS_Store

@@ -1,0 +1,11 @@
+# Memory Wall - project root. Only the /public folder is meant to be opened in a browser.
+Options -Indexes
+DirectoryIndex index.php
+
+# Never serve database dumps, docs, config examples, hidden files or Git data
+<FilesMatch "(^\.|\.(sql|md|json|lock|log|sh|ini|yml|yaml|example|dist)$)">
+  Require all denied
+</FilesMatch>
+<IfModule mod_alias.c>
+  RedirectMatch 404 "/\.git"
+</IfModule>
