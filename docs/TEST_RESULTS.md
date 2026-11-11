@@ -1,8 +1,15 @@
 # Test results
 
-Run on 2026-11-11, Node v22, Chromium 153 (Playwright), Linux container. These are the actual outputs of the commands below, copied unedited apart from the TAP noise being reduced to the result lines.
+Latest run on 2026-11-11, Node v22, Chromium 153 (Playwright), Linux container. These are the actual outputs of the commands below, copied unedited apart from the TAP noise being reduced to the result lines.
 
-## 1. Automated API tests — `npm test`
+## 0. Update: the "per-visitor photo limit is enforced" failure (investigated and fixed)
+- **Observed:** the test passed in every full `npm test` run on the author's machine (6/6), but **failed intermittently when run alone** (roughly 1 run in 3-4), and was reported failing (27/28) by a reviewer.
+- **Cause (application bug, not a test bug):** in `server/app.js` the files of one upload request are validated in parallel (`Promise.all`), and each valid file was appended to the list in the order it *finished decoding*. A smaller file selected second could finish first and be saved first. Consequences: the per-visitor limit could be given to the wrong photo, and photos could be stored (and shown) out of the visitor's selection order. The test saw `['rejected','accepted']` instead of `['accepted','rejected']`.
+- **Fix:** after validation the list is sorted back into selection order (`good.sort((x, y) => x.i - y.i)`). The original test is **unchanged**.
+- **Regression test added:** "files in one request are saved in the order they were selected" (large slow-to-decode image first, tiny image second, one slot left). Measured: **fails 19/20 runs without the fix, 0/30 with it**. The original limit test: **0 failures in 30 isolated runs** after the fix.
+- Honest note: my first draft of the regression test failed for the wrong reason (its noise image exceeded the 1 MB test limit, so the "fails before the fix" evidence was invalid). It was corrected and the before/after comparison above was re-measured.
+
+## 1. Automated API tests — `npm test` (latest run)
 ```
 PASS 1. new visitor: valid PNG is accepted, a code is issued and the photo is cleaned to JPEG
 PASS 2. rejects a text file renamed .jpg
@@ -14,30 +21,32 @@ PASS 7. consent is required, name is required, and nothing is stored without the
 PASS 8. uploaded filename is never trusted (path traversal name is ignored)
 PASS 9. returning visitor: code finds previous photos; new upload adds to them; duplicates are blocked
 PASS 10. unknown visitor code is rejected
-FAIL 11. per-visitor photo limit is enforced
-PASS 12. withdrawing consent deletes photos from disk, database and slideshow
-PASS 13. a visitor can remove a single photo of their own only
-PASS 14. slideshow does not expose names unless the admin enables it
-PASS 15. live update: connected slideshow receives an event when a photo is uploaded
-PASS 16. concurrent uploads: 20 simultaneous requests from different visitors all succeed with no duplicates
-PASS 17. concurrent uploads: the SAME photo sent 8 times at once by one visitor is stored once
-PASS 18. concurrent uploads never exceed the per-visitor limit
-PASS 19. disk and database stay in sync (no orphan files)
-PASS 20. admin API and pages are protected
-PASS 21. admin login: wrong password fails, correct password sets an HttpOnly SameSite cookie
-PASS 22. admin login is rate limited
-PASS 23. admin rejects cross-site requests
-PASS 24. admin: stats are real, hide removes a photo from the slideshow, delete removes the file, settings validate
-PASS 25. admin can delete a visitor and all their photos
-PASS 26. security: path traversal and odd photo names return 404; headers are set
-PASS 27. security: the database file and uploads folder are not reachable over HTTP
-PASS 28. visitor codes are stored hashed, never in plain text
-tests 28
-pass 27
-fail 1
+PASS 11. per-visitor photo limit is enforced
+PASS 12. files in one request are saved in the order they were selected (large first, tiny second)
+PASS 13. withdrawing consent deletes photos from disk, database and slideshow
+PASS 14. a visitor can remove a single photo of their own only
+PASS 15. slideshow does not expose names unless the admin enables it
+PASS 16. live update: connected slideshow receives an event when a photo is uploaded
+PASS 17. concurrent uploads: 20 simultaneous requests from different visitors all succeed with no duplicates
+PASS 18. concurrent uploads: the SAME photo sent 8 times at once by one visitor is stored once
+PASS 19. concurrent uploads never exceed the per-visitor limit
+PASS 20. disk and database stay in sync (no orphan files)
+PASS 21. admin API and pages are protected
+PASS 22. admin login: wrong password fails, correct password sets an HttpOnly SameSite cookie
+PASS 23. admin login is rate limited
+PASS 24. admin rejects cross-site requests
+PASS 25. admin: stats are real, hide removes a photo from the slideshow, delete removes the file, settings validate
+PASS 26. admin can delete a visitor and all their photos
+PASS 27. security: path traversal and odd photo names return 404; headers are set
+PASS 28. security: the database file and uploads folder are not reachable over HTTP
+PASS 29. visitor codes are stored hashed, never in plain text
+tests 29
+pass 29
+fail 0
 ```
+The full suite was run 6 times in a row after the fix: 29/29 passed every time.
 
-## 2. Real-browser end-to-end checks — `node tests/e2e.js`
+## 2. Real-browser end-to-end checks — `node tests/e2e.js` (latest run)
 ```
 PASS  Slideshow shows a friendly empty state
 PASS  Submit disabled with no photos
@@ -79,7 +88,7 @@ PASS  No console errors, page errors or failed requests
 
 37/37 browser checks passed
 ```
-Screenshots from this run are in `docs/screenshots/` (light and dark themes, upload, status, slideshow, admin, mobile menu, confirmation dialog).
+Screenshots from this run are in `docs/screenshots/`.
 
 ## 3. Smoke test of the real start-up (manual, performed)
 - Starting with placeholder secrets → refused with an explanatory message. ✔
@@ -89,13 +98,13 @@ Screenshots from this run are in `docs/screenshots/` (light and dark themes, upl
 | Requirement | Covered by |
 |---|---|
 | New visitor registration, multiple uploads | API 1, 8; e2e "Visitor code is issued", "Success page reports 2 photos" |
-| Invalid file rejection, size and count limits | API 2–6; e2e "Invalid file is reported" |
-| Immediate slideshow update | API 15 (SSE event); e2e "New photo appears … without a refresh" |
+| Invalid file rejection, size and count limits | API 2–6, 12 (selection order); e2e "Invalid file is reported" |
+| Immediate slideshow update | API 16 (SSE event); e2e "New photo appears … without a refresh" |
 | Returning visitor, previous photos shown again | API 9–11; e2e "Returning visitor sees their previous photos", "Previous and new photos are together" |
-| Consent enforcement and removal | API 7, 12, 13; e2e consent message, withdraw empties the open slideshow |
-| Simultaneous uploads | API 16 (20 parallel visitors), 17 (same photo ×8 → stored once), 18 (limit never exceeded), 19 (no orphan files) |
+| Consent enforcement and removal | API 7, 13, 14; e2e consent message, withdraw empties the open slideshow |
+| Simultaneous uploads | API 17 (20 parallel visitors), 17 (same photo ×8 → stored once), 18 (limit never exceeded), 19 (no orphan files) |
 | Slideshow progression and empty state | e2e "advances automatically (3 s)", "friendly empty state" |
-| Admin protection | API 20–23; e2e redirect and wrong-password checks |
+| Admin protection | API 21–24; e2e redirect and wrong-password checks |
 | Responsive layout, themes | e2e 7 pages at 375 px with no sideways scroll; theme toggle and persistence |
 | No console errors / broken assets | e2e final check across all pages |
 

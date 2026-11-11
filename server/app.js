@@ -135,6 +135,9 @@ function createApp(config) {
         if (!v.ok) { results[i] = { name: label, status: 'rejected', reason: v.reason }; return; }
         good.push({ i, label, data: v.data, sha: crypto.createHash('sha256').update(f.buffer).digest('hex') });
       }));
+      // Validation ran in parallel and finished in arbitrary order: restore the visitor's selection order,
+      // so photos are saved (and limits applied) first-selected-first.
+      good.sort((x, y) => x.i - y.i);
       if (!good.length) return res.status(422).json({ error: 'None of the photos could be accepted.', results });
 
       // 2) Write to *.part files, then rename: a half-written file can never be served.

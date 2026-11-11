@@ -11,6 +11,7 @@ Each item says what the brief left open, what was decided, and why.
 ## Photo display duration and order
 - Default **8 seconds**, admin-configurable from 3 to 120 s. Clamped again in the display page.
 - Photos play in upload order and loop. A **newly uploaded photo is shown next** (before the loop continues), so visitors see theirs within one slide duration.
+- Photos selected together are saved in the order selected (the server restores this order after parallel validation).
 - With one photo, it stays on screen. If one image fails to load it is skipped; if all fail, the page retries after 10 s. If the live connection drops, the page re-checks every 60 s and the browser reconnects automatically.
 
 ## Consent and removal

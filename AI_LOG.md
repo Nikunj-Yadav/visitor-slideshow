@@ -9,7 +9,7 @@
 3. **Image safety decision.** Instead of only checking file extensions or MIME types, every upload is sniffed (magic bytes), fully decoded by `sharp`, and re-encoded as JPEG. Reason: this catches corrupt files and also strips GPS metadata, which matters for a public display.
 4. **Upload design.** The page sends one photo per request. Reason: `multer` rejects a whole request if one file is too big, so per-file requests give per-photo progress and per-photo error messages. The first photo goes alone (it creates the visitor and returns the code); the rest go three at a time.
 5. **Returning-visitor design.** A random hashed code instead of email/login, saved in `localStorage` for same-device recognition. Trade-offs are listed in ASSUMPTIONS.md.
-6. **Test-first backend.** Wrote 28 API tests (validation, consent, returning visitors, concurrency, admin protection, live events) and ran them before building any page.
+6. **Test-first backend.** Wrote 28 API tests (29 after the fix described in G) (validation, consent, returning visitors, concurrency, admin protection, live events) and ran them before building any page.
 7. **Browser test.** Wrote `tests/e2e.js` (Chromium) to drive the real pages, including a live slideshow open in a second tab, and then looked at the screenshots instead of trusting the pass/fail output.
 8. **Fixing what the tests found** — see below.
 
@@ -24,4 +24,6 @@
 | E | Slideshow CSS gave `.waiting` `display: grid`, which silently overrides the HTML `hidden` attribute. | The e2e check "new photo appears without refresh" failed. The first version of the empty-state check only looked at the attribute, so it had passed while the "Waiting for the first photo" text would have been drawn **on top of live photos**. | Added `[hidden] { display: none !important; }` and changed the tests to check real visibility (`isVisible()`) in both directions. |
 | F | `fmtBytes(0)` returned "1 KB" (a `Math.max(1, …)` meant for tiny files). | Seen in the dark-theme dashboard screenshot: "Storage used: 1 KB" on an empty system. | Return "0 KB" for zero bytes. |
 
-Lesson recorded: passing tests are only as good as what they assert (E), and browser-level tests find problems that API tests cannot (D, E, F).
+| G | Validated the files of one request in parallel and stored them in *completion* order, so file order (and which file got the last free slot) was random. | Not caught by my own runs (the test passed in full suites). A reviewer reported it failing; running that test alone in a loop reproduced it (failed on run 4 of 12). | Sort validated files back into selection order. Added a regression test. My first version of that regression test was itself wrong (precondition failed: image bigger than the 1 MB test limit), which I only found because it still failed after the fix; re-measured properly (19/20 fail without fix, 0/30 with). |
+
+Lesson recorded: passing tests are only as good as what they assert (E), browser-level tests find problems API tests cannot (D, E, F), and a test that passes in a full run can still be flaky: run suspicious tests in isolation and in loops (G).

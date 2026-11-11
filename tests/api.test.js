@@ -133,6 +133,17 @@ test('per-visitor photo limit is enforced', async () => {
   assert.equal(b.body.visitor.photoCount, 6);
 });
 
+test('files in one request are saved in the order they were selected (large first, tiny second)', async () => {
+  const files = []; for (let i = 0; i < 5; i++) files.push({ data: await png(300 + i) });
+  const a = await upload({ name: 'Order', files });
+  const code = a.body.visitor.code;
+  // Slow-to-decode large image first, instant tiny image second; only ONE slot is left (limit is 6).
+  const large = await sharp(crypto.randomBytes(500 * 500 * 3), { raw: { width: 500, height: 500, channels: 3 } }).png().toBuffer();
+  assert.ok(large.length < 1024 * 1024);
+  const b = await upload({ code, files: [{ data: large }, { data: await png(310) }] });
+  assert.deepEqual(b.body.results.map((r) => r.status), ['accepted', 'rejected']);
+});
+
 // ---- consent withdrawal ----
 test('withdrawing consent deletes photos from disk, database and slideshow', async () => {
   const up = await upload({ name: 'Leaver', files: [{ data: await png(20) }, { data: await png(21) }] });

@@ -65,7 +65,7 @@ public/   index.html status.html my-photos.html slideshow.html 404.html
           css/app.css (design system)  css/slideshow.css
           js/common.js (theme, icons, toasts, dialogs)  js/<page>.js
 views/    admin.html manage.html login.html   (served only through guarded routes)
-tests/    api.test.js (28 API tests)   e2e.js (37 browser checks)
+tests/    api.test.js (29 API tests)   e2e.js (37 browser checks)
 docs/     TEST_RESULTS.md  screenshots/
 data/     app.db + uploads/  (created at run time, ignored by Git)
 ```

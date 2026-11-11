@@ -51,7 +51,7 @@ Generate a secret with `openssl rand -hex 32`. The server refuses to start while
 
 ## Tests
 ```bash
-npm test                  # 28 automated API tests (no browser needed)
+npm test                  # 29 automated API tests (no browser needed)
 npm i --no-save playwright && npx playwright install chromium
 node tests/e2e.js         # 37 real-browser checks; writes screenshots to docs/screenshots
 ```
