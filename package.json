@@ -1,0 +1,25 @@
+{
+  "name": "visitor-photo-slideshow",
+  "version": "1.0.0",
+  "description": "Visitors upload photos that appear live on a shared display.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test tests/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@fontsource-variable/manrope": "^5.3.0",
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.4",
+    "helmet": "^8.3.0",
+    "multer": "^2.5.0",
+    "sharp": "^0.35.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
