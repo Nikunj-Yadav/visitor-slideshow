@@ -157,7 +157,7 @@ function log_activity(PDO $pdo, string $message): void
 {
     $pdo->prepare('INSERT INTO activity (message) VALUES (?)')->execute([mb_substr($message, 0, 255)]);
     // keep only the latest 200 rows (derived table is required by MySQL)
-    $pdo->exec('DELETE FROM activity WHERE id <= (SELECT m FROM (SELECT MAX(id) - 200 AS m FROM activity) t)');
+    $pdo->exec('DELETE FROM activity WHERE id <= (SELECT m FROM (SELECT CAST(MAX(id) AS SIGNED) - 200 AS m FROM activity) t)');
 }
 
 function valid_filename(string $f): bool

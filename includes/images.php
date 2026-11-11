@@ -97,6 +97,12 @@ function process_image(string $tmpPath, string $declaredMime, string $origName, 
     if ($info === false || $info[0] < 1 || $info[1] < 1) { return ['ok' => false, 'reason' => 'Image is damaged or cannot be read.']; }
     if ($info[0] * $info[1] > (int) cfg('max_pixels')) { return ['ok' => false, 'reason' => 'Image has too many pixels.']; }
 
+    // GD does not complain about a JPEG that was cut short (it just shows a grey picture), so check the
+    // end-of-image marker (FF D9). Entropy-coded JPEG data can never contain FF D9 by accident.
+    if ($real === 'image/jpeg' && strpos(substr($bytes, -2048), "\xFF\xD9") === false) {
+        return ['ok' => false, 'reason' => 'Image is damaged or cannot be read.'];
+    }
+
     $warnings = [];
     set_error_handler(function ($no, $msg) use (&$warnings) { $warnings[] = $msg; return true; });
     $img = imagecreatefromstring($bytes);

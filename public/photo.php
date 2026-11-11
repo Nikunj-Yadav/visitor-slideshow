@@ -4,8 +4,8 @@
  * Public visitors only get approved photos of visitors who gave consent; an admin may see hidden ones.
  */
 require __DIR__ . '/../includes/bootstrap.php';
-$file = (string) ($_GET['f'] ?? '');
-if (!valid_filename($file)) { http_response_code(404); exit; }   // blocks ../ and any odd name
+$file = $_GET['f'] ?? '';
+if (!is_string($file) || !valid_filename($file)) { http_response_code(404); exit; }   // blocks ../ and any odd name
 $st = db()->prepare('SELECT p.status, v.consent_at FROM photos p JOIN visitors v ON v.id = p.visitor_id WHERE p.filename = ?');
 $st->execute([$file]);
 $row = $st->fetch();
