@@ -1,0 +1,7 @@
+{
+  "name": "memory-wall-e2e",
+  "private": true,
+  "description": "OPTIONAL browser test (Playwright). The application itself needs no Node.js.",
+  "scripts": { "test": "node e2e.js" },
+  "devDependencies": { "playwright": "^1.40.0" }
+}
