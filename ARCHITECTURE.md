@@ -1,83 +1,85 @@
-# Architecture
+# Architecture (PHP + MySQL)
 
 ## Technology choices
-See the table in [README.md](README.md). In one sentence: a single Node.js/Express process serves the pages and a JSON API, stores data in one SQLite file plus an `uploads/` folder, and pushes live updates to the slideshow with Server-Sent Events.
-
-Rejected on purpose: React/Vue (brief requires vanilla JS), WebSockets (SSE is enough for one-way updates), PostgreSQL/Redis (more to install and explain; SQLite handles an event-sized load), cloud object storage (extra accounts and keys), user accounts/e-mail login (collects personal data we do not need).
+- **Core PHP 8**, one small script per endpoint — easy to read top-to-bottom and to explain in a viva. Shared code sits in `includes/`.
+- **MySQL/MariaDB via PDO** with real prepared statements (`ATTR_EMULATE_PREPARES = false`): user input is never pasted into SQL. InnoDB gives transactions, row locks and foreign keys.
+- **GD** for images: decode (proves it is a real picture), rotate, resize, re-encode as JPEG (removes GPS/EXIF).
+- **Polling** for live updates (reasons in ASSUMPTIONS.md).
+- **Apache + XAMPP**; no extra services, no Composer, no npm.
 
 ## System diagram
 ```mermaid
 flowchart LR
-  V[Visitor phone<br/>/ upload page] -- "POST /api/upload (one photo per request)" --> S
-  R[Returning visitor<br/>/my-photos] -- "POST /api/visitor/*" --> S
-  A[Admin browser<br/>/admin, /admin/manage] -- "cookie + /api/admin/*" --> S
-  subgraph S[Node.js + Express server]
+  V["Visitor phone<br/>index.php"] -- "POST api/upload.php<br/>(one photo per request)" --> A
+  R["Returning visitor<br/>my-photos.php"] -- "POST api/visitor-*.php" --> A
+  AD["Admin browser<br/>admin/*.php"] -- "session + CSRF token<br/>api/admin/*.php" --> A
+  TV["TV / computer<br/>slideshow.php"] -- "GET api/slideshow.php?since=N<br/>every 3 s" --> A
+  TV -- "GET photo.php?f=..." --> A
+  subgraph A["Apache + PHP (public/)"]
     direction TB
-    M[multer: size and count limits] --> I[images.js: magic bytes, sharp decode, re-encode JPEG]
-    I --> T[(SQLite transaction:<br/>find or create visitor, limits, duplicates, insert)]
-    EV[events.js: SSE hub]
+    BS["includes/bootstrap.php<br/>config, security headers, errors"]
+    IMG["includes/images.php (GD)<br/>magic bytes, decode, rotate, resize, JPEG"]
+    TX["with_transaction()<br/>lock visitor, limits, duplicates, insert, bump data_version"]
+    PH["photo.php<br/>approved + consent, or admin"]
   end
-  S --- DB[(app.db)]
-  S --- FS[(uploads/ *.jpg)]
-  T -. "photos-changed" .-> EV
-  EV -- "text/event-stream" --> TV[TV / computer<br/>/slideshow]
-  TV -- "GET /api/slideshow, GET /photos/:file" --> S
+  A --- DB[("MySQL<br/>visitor_slideshow")]
+  A --- FS[("uploads/*.jpg<br/>blocked by .htaccess")]
 ```
 
 ## Upload sequence
 ```mermaid
 sequenceDiagram
   participant B as Browser
-  participant S as Server
-  participant D as SQLite
-  participant T as Slideshow
-  B->>S: POST /api/upload (name or code, consent, photo)
-  S->>S: size/count limits, consent check
-  S->>S: sniff magic bytes, decode + re-encode (strip EXIF)
-  S->>S: write file.part, rename to uuid.jpg
-  S->>D: BEGIN: visitor, photo limit, duplicate check, INSERT
-  D-->>S: COMMIT
-  S-->>B: result per file (+ visitor code, first time only)
-  S-->>T: SSE "photos-changed"
-  T->>S: GET /api/slideshow
-  S-->>T: approved photos (consent + not hidden)
+  participant P as PHP (upload.php)
+  participant G as GD
+  participant D as MySQL
+  participant T as Slideshow page
+  B->>P: POST photos[] + consent + name or code
+  P->>P: rate limit, size/count limits, consent check
+  P->>G: validate + clean each file
+  G-->>P: new JPEG written to name.jpg.part
+  P->>P: rename .part to .jpg
+  P->>D: BEGIN; SELECT visitor FOR UPDATE (or INSERT visitor)
+  P->>D: limit check, duplicate check, INSERT photos, bump data_version; COMMIT
+  P-->>B: result per file (+ code, first time only)
+  T->>P: GET slideshow.php?since=N (every 3 s)
+  P-->>T: changed -> approved photo list
 ```
 
 ## Data model
 ```mermaid
 erDiagram
   VISITORS ||--o{ PHOTOS : owns
-  VISITORS { int id PK  text name  text code_hash UK  text consent_at  text created_at }
-  PHOTOS   { int id PK  int visitor_id FK  text filename UK  text sha256  int bytes  text status  text created_at }
-  SETTINGS { text key PK  text value }
-  ACTIVITY { int id PK  text message  text created_at }
+  VISITORS { int id PK  varchar name  char code_hash UK  datetime consent_at  datetime created_at }
+  PHOTOS   { bigint id PK  int visitor_id FK  varchar filename UK  char sha256  int bytes  enum status  datetime created_at }
+  SETTINGS { varchar setting_key PK  varchar setting_value }
+  ACTIVITY { int id PK  varchar message  datetime created_at }
+  ADMIN_USERS { tinyint id PK  varchar password_hash  datetime created_at }
+  RATE_LIMIT_HITS { bigint id PK  varchar bucket  varchar ip  datetime hit_at }
 ```
-- `PHOTOS(visitor_id, sha256)` is UNIQUE — the database itself prevents duplicate entries.
-- `ON DELETE CASCADE`: deleting a visitor deletes their photo rows (files are removed by the server).
-- `status` is `approved` or `hidden` (admin moderation). A photo is public only if `status='approved'` **and** the visitor's `consent_at` is not NULL.
-- `SETTINGS` holds `durationSeconds` and `showNames`. `ACTIVITY` is a capped log (last 200 rows) for the dashboard.
+- `PHOTOS(visitor_id, sha256)` UNIQUE → duplicates impossible. `ON DELETE CASCADE` → deleting a visitor removes their rows (files are deleted by PHP afterwards).
+- Image **files are not stored in MySQL**; only `filename` (random 32 hex characters + `.jpg`).
+- `status` is `approved` or `hidden`. A photo is public only if `approved` **and** `visitors.consent_at` is not NULL.
+- `SETTINGS`: `duration_seconds`, `show_names`, and `data_version` (a counter that rises on every change; the slideshow polls it).
+- `ADMIN_USERS`: at most one row (`id` = 1) with a `password_hash()` value.
 
-## Project structure
-```
-server/   index.js (start-up, .env)   app.js (routes)   db.js (schema)
-          images.js (validation)      auth.js (admin cookie)   events.js (SSE)
-public/   index.html status.html my-photos.html slideshow.html 404.html
-          css/app.css (design system)  css/slideshow.css
-          js/common.js (theme, icons, toasts, dialogs)  js/<page>.js
-views/    admin.html manage.html login.html   (served only through guarded routes)
-tests/    api.test.js (29 API tests)   e2e.js (37 browser checks)
-docs/     TEST_RESULTS.md  screenshots/
-data/     app.db + uploads/  (created at run time, ignored by Git)
-```
+## Request flow in a nutshell
+1. Every script starts with `includes/bootstrap.php` (config, helpers, DB, auth, security headers, error handler).
+2. **Pages** (`public/*.php`) print the shared `<head>` (`page_head()`), static HTML, and one script file. All data comes from the **API** (`public/api/*.php`) as JSON.
+3. **API** scripts: check the method → rate limit → validate input → prepared statements/transaction → `json_out()`.
+4. **Admin** scripts additionally call `require_admin_post()` (session + same-origin + CSRF) or `require_admin_get()`.
 
-## Security measures (where each lives)
+## Security measures
 | Risk | Measure |
 |---|---|
-| Malicious / fake files | magic-byte check + full decode + re-encode (`images.js`); random UUID filenames; originals never stored |
-| Oversized uploads | multer limits → HTTP 413; pixel limit |
-| Public access to hidden/deleted photos | photos are served by a route that checks the database (not a static folder) |
-| Path traversal | file name must match `^[a-f0-9-]{36}\.jpg$` |
-| XSS | all user text rendered with `textContent`; strict CSP (`script-src 'self'`, no inline styles) |
-| Admin access | signed HttpOnly SameSite=Strict cookie, constant-time password check, rate-limited login, same-origin check on writes |
-| Code guessing | ~50-bit codes, hashed at rest, lookup rate limit |
-| Race conditions | single synchronous SQLite transaction; UNIQUE constraints; temp-file-then-rename |
+| SQL injection | PDO prepared statements; sort columns come from a whitelist |
+| Fake/malicious files | magic bytes + type + extension agreement, full GD decode, re-encode, random file names, pixel limit |
+| Direct access to photos | `uploads/` denied by `.htaccess`; `photo.php` checks the database; file name must match `^[a-f0-9]{32}\.jpg$` |
+| Path traversal | file names are never taken from the request |
+| XSS | JavaScript uses `textContent`; PHP output uses `h()`; strict Content-Security-Policy (no inline scripts/styles) |
+| CSRF | admin writes need the session's token in a header + same-origin check; SameSite=Strict cookie |
+| Session attacks | HttpOnly cookie, strict mode, new id on login, idle timeout |
+| Brute force | per-IP rate limits (login, code lookup, uploads) stored in MySQL |
+| Secrets | `config.local.php` is git-ignored; admin password only as a hash; visitor codes only as hashes |
+| Race conditions | InnoDB transaction + `FOR UPDATE` + UNIQUE constraints + `.part` rename |
+| Config exposure | `config/`, `includes/`, `tests/`, `docs/`, `*.sql`, `*.md`, `.git` blocked by `.htaccess` |

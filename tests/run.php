@@ -272,6 +272,7 @@ test('files in one request are saved in the order they were selected (large firs
 test('withdrawing consent deletes photos from disk, database and slideshow', function () use ($UPLOADS) {
     $code = upload(['name' => 'Leaver', 'files' => [['data' => png(20)], ['data' => png(21)]]])['body']['visitor']['code'];
     $mine = post('api/visitor-lookup.php', ['code' => $code])['json']; $urls = array_column($mine['photos'], 'url');
+    foreach ($urls as $u) { eq(http('GET', $u)['status'], 200, 'photo must be served BEFORE withdrawal (otherwise the 404 check below proves nothing)'); }
     eq(post('api/visitor-withdraw.php', ['code' => $code])['json']['removed'], 2);
     foreach ($urls as $u) { eq(http('GET', $u)['status'], 404); }
     $now = array_column(slideshow()['photos'], 'url'); foreach ($urls as $u) { ok(!in_array($u, $now, true), 'still in slideshow'); }

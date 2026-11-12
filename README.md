@@ -1,64 +1,114 @@
-# Memory Wall — Visitor Photo Slideshow
+# Memory Wall — Visitor Photo Slideshow (Core PHP + MySQL)
 
-Visitors scan a link, upload photos from their phone, and the photos appear on a shared TV or computer display within seconds. Returning visitors can use a personal code to see, add to, or delete their photos.
+Visitors open a link on their phone, upload photos, and the photos appear within seconds on a shared TV or computer display. Returning visitors use a personal code to see, add to, or delete their photos.
+
+This is the **PHP + MySQL** version, running on **XAMPP** (Apache + MySQL + phpMyAdmin). It was migrated from an earlier Node.js/SQLite version; the interface and features are the same. No Node.js, npm or terminal is needed to run it.
 
 ## Features
 - **Visitor upload page** — name, drag-and-drop or tap to choose photos, previews, per-photo progress, clear validation messages, required consent checkbox.
-- **Live slideshow** (`/slideshow`) — full-screen, cross-fading, configurable time per photo, new photos jump the queue without a refresh, friendly empty state.
-- **Returning visitors** — a personal visitor code (shown once after the first upload and remembered on the same device).
-- **Consent and removal** — photos are only shown with consent; visitors can delete single photos or withdraw consent (deletes everything).
-- **Admin** (`/admin`, password protected) — real statistics, display settings, hide/show/delete photos, delete visitors, search, filter and sort.
-- **Neumorphic UI** with light and dark themes, keyboard focus states, reduced-motion support, responsive down to phones.
+- **Live slideshow** (`slideshow.php`) — full-screen, cross-fading, configurable seconds per photo. New photos appear automatically (the page asks the server for changes every 3 seconds). Friendly empty state.
+- **Returning visitors** — a personal visitor code (shown once after the first upload, remembered on that device).
+- **Consent and removal** — photos show only with consent; visitors can delete single photos or withdraw consent (deletes everything).
+- **Admin area** — real statistics, display settings, hide/show/delete photos, delete visitors, search, filter, sort, confirmation dialogs.
+- **Neumorphic UI**, light and dark themes, keyboard focus states, reduced-motion support, responsive down to phones.
 
-## Technology and why
-| Part | Choice | Why |
-|---|---|---|
-| Server | Node.js + Express | Small, widely known, easy to explain. |
-| Database | SQLite (`better-sqlite3`) | A real SQL database in one file. Synchronous transactions make concurrent uploads safe without extra locking. |
-| Uploads | `multer` (memory) + `sharp` | Validates, fully decodes and re-encodes every image (strips GPS/EXIF, fixes rotation, resizes for TV). |
-| Real-time | Server-Sent Events | One-way push from server to slideshow; built into browsers, no library. |
-| Security | `helmet`, `express-rate-limit`, signed cookie | Standard headers and CSP, brute-force protection, simple admin login. |
-| Frontend | Plain CSS, vanilla JS, inline SVG | As required — no frameworks or templates. Font: Manrope (self-hosted). |
+## Technology
+| Part | Choice |
+|---|---|
+| Backend | Core PHP 8 (no framework), one small file per endpoint |
+| Database | MySQL / MariaDB through **PDO prepared statements** |
+| Images | **PHP GD** (checks, rotates, resizes, re-saves as clean JPEG) |
+| Frontend | HTML5, CSS3, vanilla JavaScript, inline SVG icons (unchanged from the original UI) |
+| Live updates | JavaScript polling (see ARCHITECTURE.md for why) |
+| Server | Apache (XAMPP) |
 
-## Setup
-Requires **Node.js 20 or newer** (developed on Node 22).
+---
 
-```bash
-npm install
-cp .env.example .env      # then edit .env: set ADMIN_PASSWORD and SESSION_SECRET
-npm start
-```
-Generate a secret with `openssl rand -hex 32`. The server refuses to start while the placeholder values are in `.env`.
+## Install and run with XAMPP (step by step)
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `PORT` | 3000 | HTTP port |
-| `ADMIN_PASSWORD` | — (required) | Admin login password |
-| `SESSION_SECRET` | — (required) | Signs the admin cookie |
-| `DATA_DIR` | `./data` | Database and uploaded photos |
-| `MAX_FILE_MB` | 8 | Largest accepted file |
-| `MAX_FILES_PER_REQUEST` | 10 | Files per upload request |
-| `MAX_PHOTOS_PER_VISITOR` | 30 | Total photos one visitor can have |
-| `COOKIE_SECURE` | false | Set `true` behind HTTPS |
-| `TRUST_PROXY` | false | Set `true` behind a reverse proxy (so rate limits see real IPs) |
+### 1. Install XAMPP and start the servers
+1. Download and install **XAMPP for PHP 8.x** from apachefriends.org.
+2. Open the **XAMPP Control Panel** and press **Start** next to **Apache** and **MySQL**. Both should turn green.
 
-## How to use
-1. **Display:** open `http://<server>:3000/slideshow` on the TV/computer browser and press **F** for full screen. Move the mouse to reveal the full-screen button.
-2. **Visitors:** open `http://<server>:3000/` on their phone (put this link in a QR code). Enter a name, choose photos, tick the consent box, press **Upload photos**. They receive a code such as `K7M4Q-9XWBD` — keep it.
-3. **Coming back:** same device → recognised automatically. Another device → *I have a code* tab, or the **My photos** page.
-4. **Removing photos:** **My photos** → remove one photo, or **Withdraw consent** to delete everything.
-5. **Admin:** `http://<server>:3000/admin` → sign in. Dashboard shows statistics and display settings; **Manage** hides/deletes photos and visitors.
+### 2. Put the project in `htdocs`
+Copy the whole `visitor-slideshow` folder to
+- Windows: `C:\xampp\htdocs\visitor-slideshow`
+- macOS: `/Applications/XAMPP/htdocs/visitor-slideshow`
+- Linux: `/opt/lampp/htdocs/visitor-slideshow`
+
+### 3. Create the database with phpMyAdmin
+1. Open **http://localhost/phpmyadmin**.
+2. Click the **Import** tab (top menu, with no database selected).
+3. **Choose file** → select `database.sql` from the project folder → **Import** (button at the bottom).
+4. You should now see a database called **`visitor_slideshow`** with 6 tables (`visitors`, `photos`, `settings`, `activity`, `admin_users`, `rate_limit_hits`).
+
+(The file creates the database itself. It is safe to import twice.)
+
+### 4. Database settings
+A fresh XAMPP uses user `root` with an **empty password**, and the project is already set up for that — **nothing to change**.
+If you set a MySQL password: copy `config/config.example.php` to `config/config.local.php` and edit it. (`config.local.php` is never published to Git.)
+
+### 5. Upload folder permissions
+- **Windows:** nothing to do.
+- **macOS / Linux:** open a terminal in the project folder and run `chmod -R 777 uploads` (XAMPP's web server runs as a different user and must be allowed to write there).
+
+### 6. Check that everything is ready
+Open **http://localhost/visitor-slideshow/public/check.php**. Every line should say **OK**. If something says *Fix needed*, the page tells you what to do (for example enabling the GD extension in `php.ini`, or starting MySQL). This page only works on the same computer.
+
+### 7. Use the application
+| What | Address |
+|---|---|
+| Visitor page (upload) | http://localhost/visitor-slideshow/ |
+| Slideshow (put this on the TV, press **F** for full screen) | http://localhost/visitor-slideshow/public/slideshow.php |
+| My photos (returning visitors) | http://localhost/visitor-slideshow/public/my-photos.php |
+| Admin | http://localhost/visitor-slideshow/public/admin/index.php |
+
+**First time in the admin area:** you are asked to create the admin password (at least 10 characters). It is stored only as a secure hash. Afterwards you sign in with that password.
+**Forgot the admin password?** In phpMyAdmin open table `admin_users`, delete the single row, then visit the admin address again to create a new password.
+
+**Visitors on phones (same Wi-Fi):** find your computer's IP address (Windows: `ipconfig`), then visitors open `http://192.168.x.x/visitor-slideshow/`. Allow Apache through the Windows firewall when asked.
+
+### How a visitor uses it
+1. Open the visitor page, enter a name, choose photos, tick the consent box, press **Upload photos**.
+2. They get a code such as `K7M4Q-9XWBD`. Keep it.
+3. Coming back on the same device: recognised automatically. On another device: **I have a code** tab or the **My photos** page.
+4. **My photos** → remove a photo, or **Withdraw consent** to delete everything.
+
+### Troubleshooting
+| Problem | Fix |
+|---|---|
+| "Connection refused" / "Something went wrong" | MySQL is not started, or `database.sql` was not imported. Open `check.php`. |
+| Photos are rejected with "could not be processed" | The GD extension is off. In XAMPP: Apache → Config → `php.ini` → make sure `extension=gd` has no `;` in front → restart Apache. |
+| "Upload failed" for every photo (macOS/Linux) | Run `chmod -R 777 uploads`. |
+| Error details | `xampp/apache/logs/error.log` (the app logs real errors there and shows visitors only a friendly message). |
+| Photo larger than 8 MB | Limit is set in `config/config.php` (`max_file_mb`); PHP itself allows up to 12 MB via `public/.htaccess`. |
+
+## Settings
+`config/config.php` lists every setting with its default; override any of them in `config/config.local.php`: database login, `max_file_mb` (8), `max_files_per_request` (10), `max_photos_per_visitor` (30), `session_hours` (8), rate limits, `cookie_secure` (set `true` on HTTPS).
 
 ## Tests
-```bash
-npm test                  # 29 automated API tests (no browser needed)
-npm i --no-save playwright && npx playwright install chromium
-node tests/e2e.js         # 37 real-browser checks; writes screenshots to docs/screenshots
+Tests run against a **separate test database** so real data is never touched.
+```text
+1. Copy the project to htdocs/visitor-slideshow-test
+2. In that copy create config/config.local.php containing:
+      <?php return ['db_name' => 'visitor_slideshow_test'];
+3. cd into that copy, then:
+      php tests/create-test-db.php        (creates the test database)
+      php tests/run.php http://localhost/visitor-slideshow-test/public/
 ```
-Results of the actual runs are in [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md).
+On Windows use `C:\xampp\php\php.exe` instead of `php`. `tests/run.php` runs 42 tests over HTTP and directly checks MySQL. An optional browser test (Playwright; the only part that needs Node.js) is in `tests/e2e/`. Real results: [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md).
 
-## Deployment
-No deployed link exists yet — this must be done by the project owner. Any host that runs a long-lived Node process with a **persistent disk** works (a small VPS, Render, Railway, Fly.io). Steps: set the environment variables above, set `DATA_DIR` to the persistent disk, use HTTPS (`COOKIE_SECURE=true`, `TRUST_PROXY=true`), and make sure the proxy does not buffer `/api/events` (the app sends `X-Accel-Buffering: no`). Run **one** instance only (SQLite + in-memory live updates). Platforms with ephemeral disks (e.g. free tiers without a volume) will lose photos on restart.
+## Project structure
+```
+config/     config.php (settings loader)  config.example.php  (database login etc.)
+includes/   bootstrap.php  helpers.php  db.php  auth.php  ratelimit.php  images.php (GD)  layout.php
+public/     visitor and admin pages (*.php), photo.php, check.php, css/ js/ fonts/
+public/api/        JSON endpoints used by the pages (upload, lookup, slideshow, ...)
+public/api/admin/  admin endpoints (login, stats, photos, visitors, settings, ...)
+uploads/    photo files (blocked from direct web access)
+database.sql   MySQL schema      tests/   automated tests      docs/   test results, screenshots
+```
+Only `public/` is meant to be opened in a browser; `config/`, `includes/`, `uploads/`, `tests/` and `docs/` are blocked by `.htaccess` files. On a real server, point the web server's document root at `public/`.
 
 ## Documentation
 [ASSUMPTIONS.md](ASSUMPTIONS.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [AI_LOG.md](AI_LOG.md) · [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md)
