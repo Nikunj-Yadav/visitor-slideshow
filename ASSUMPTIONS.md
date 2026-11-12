@@ -55,6 +55,7 @@ Each item says what the brief left open, what was decided, and why. Items marked
 ## Files and URLs
 - Photos live in `uploads/` (not inside `public/`), blocked by `.htaccess`, and are served only through `photo.php`, which checks the database (approved + consent, or admin).
 - All page and API URLs are **relative** to a `<base>` tag computed from where the project is installed, so it works in any `htdocs` sub-folder. Links use real file names (`index.php`) so nothing depends on Apache URL rewriting; rewriting is used only for the friendly 404 page and is skipped if `mod_rewrite` is off.
+- Blocking `uploads/`, `config/`, `includes/`, `tests/`, `docs/` relies on Apache reading the `.htaccess` files (`AllowOverride All`, the XAMPP default). `check.php` tests this by requesting a file in `uploads/` and warns if it is reachable. On a real server, point the document root at `public/` so these folders are not in the web root at all.
 - The setup page `check.php` works only from `localhost`.
 
 ## Other

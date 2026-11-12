@@ -53,7 +53,7 @@ If you set a MySQL password: copy `config/config.example.php` to `config/config.
 - **macOS / Linux:** open a terminal in the project folder and run `chmod -R 777 uploads` (XAMPP's web server runs as a different user and must be allowed to write there).
 
 ### 6. Check that everything is ready
-Open **http://localhost/visitor-slideshow/public/check.php**. Every line should say **OK**. If something says *Fix needed*, the page tells you what to do (for example enabling the GD extension in `php.ini`, or starting MySQL). This page only works on the same computer.
+Open **http://localhost/visitor-slideshow/public/check.php**. Every line should say **OK** (including *Private folders are blocked from the web*). If something says *Fix needed*, the page tells you what to do (for example enabling the GD extension in `php.ini`, or starting MySQL). This page only works on the same computer.
 
 ### 7. Use the application
 | What | Address |
@@ -80,6 +80,7 @@ Open **http://localhost/visitor-slideshow/public/check.php**. Every line should 
 | "Connection refused" / "Something went wrong" | MySQL is not started, or `database.sql` was not imported. Open `check.php`. |
 | Photos are rejected with "could not be processed" | The GD extension is off. In XAMPP: Apache → Config → `php.ini` → make sure `extension=gd` has no `;` in front → restart Apache. |
 | "Upload failed" for every photo (macOS/Linux) | Run `chmod -R 777 uploads`. |
+| `check.php` says private folders are **NOT blocked** | Apache is ignoring the `.htaccess` files. In `xampp/apache/conf/httpd.conf` the `<Directory "…/htdocs">` block needs `AllowOverride All` (this is the XAMPP default). Fix it and restart Apache — until then anyone could open `uploads/` and `config/` by typing the address. |
 | Error details | `xampp/apache/logs/error.log` (the app logs real errors there and shows visitors only a friendly message). |
 | Photo larger than 8 MB | Limit is set in `config/config.php` (`max_file_mb`); PHP itself allows up to 12 MB via `public/.htaccess`. |
 

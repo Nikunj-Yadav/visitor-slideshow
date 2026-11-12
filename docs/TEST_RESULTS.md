@@ -13,7 +13,7 @@ Run on 2026-11-12. These are the real outputs of the commands shown. The earlier
 | Large photos | 12 MP and 24 MP JPEG uploads | both accepted (0.4 s and 0.6 s), no memory errors |
 | Apache error log during the final runs | | 0 PHP warnings, 0 fatal errors |
 
-**Nothing is currently failing.** Failures found and fixed during development are listed in AI_LOG.md (entries H–M).
+**Nothing is currently failing.** Failures found and fixed during development are listed in AI_LOG.md (entries H–N).
 
 ## 1. `php tests/run.php` — quick configuration (last of three runs)
 ```
@@ -191,3 +191,8 @@ Screenshots from this run are in `docs/screenshots/` (light/dark themes, upload,
 - Browsers other than Chromium; real phones (including iPhone HEIC → JPEG); smart-TV browsers; slow mobile networks; screen readers; a formal contrast audit.
 - Load beyond 20 simultaneous uploads.
 - The 3-second polling delay was observed to work in the browser test but not measured precisely.
+
+## 6. Verification of the delivered ZIP and of `check.php`
+- The ZIP was unzipped into a fresh folder under Apache, `database.sql` imported into a brand-new database, `chmod -R 777 uploads` applied (README step 5): `check.php` showed all checks OK, one real upload was accepted and listed by the slideshow API.
+- `check.php` folder-protection check, observed on the same files served two ways: with `AllowOverride All` it reports OK and `uploads/.gitkeep` returns **403**; with `AllowOverride None` it reports **"NOT blocked (HTTP 200)"** and the file is indeed served. (This check was added after the second case exposed the risk; see AI_LOG entry N.)
+- `check.php` with a database that does not exist reports "Fix needed" for the connection with a plain-language hint.

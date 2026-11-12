@@ -32,6 +32,21 @@ $dir = (string) cfg('upload_dir');
 $add('Upload folder is writable', is_dir($dir) && is_writable($dir), is_dir($dir) && is_writable($dir) ? 'ok' : 'On macOS/Linux run: chmod -R 777 uploads');
 $add('Upload limits in PHP', true, 'upload_max_filesize = ' . ini_get('upload_max_filesize') . ', post_max_size = ' . ini_get('post_max_size') . ' (the app allows ' . (int) cfg('max_file_mb') . ' MB per photo)');
 
+// Are private folders really blocked? (needs "AllowOverride All" so Apache reads the .htaccess files)
+$base = base_url();
+if (substr($base, -8) === '/public/') {
+    $url = (is_https() ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost') . substr($base, 0, -7) . 'uploads/.gitkeep';
+    $ctx = stream_context_create(['http' => ['timeout' => 3, 'ignore_errors' => true, 'follow_location' => 0]]);
+    @file_get_contents($url, false, $ctx);
+    $code = 0;
+    foreach ($http_response_header ?? [] as $line) { if (preg_match('#^HTTP/\S+ (\d{3})#', $line, $m)) { $code = (int) $m[1]; } }
+    if ($code === 0) { $add('Private folders are blocked from the web', true, 'Could not test from here (the server cannot call itself) - open ' . $url . ' in your browser: it must show "Forbidden".'); }
+    else { $add('Private folders (uploads, config) are blocked from the web', $code === 403 || $code === 404,
+        $code === 403 || $code === 404 ? 'ok (the .htaccess files are working)' : 'NOT blocked (HTTP ' . $code . '). In httpd.conf set AllowOverride All for htdocs (XAMPP default) and restart Apache.'); }
+} else {
+    $add('Private folders are blocked from the web', true, 'The web root is the public folder, so uploads/ and config/ are not reachable.');
+}
+
 page_head('Setup check', ['noindex' => true]);
 ?>
   <main class="page page--narrow">
