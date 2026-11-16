@@ -105,6 +105,15 @@ img { max-width: 100%; display: block; }
   .nav-links a, .nav-links button { justify-content: flex-start; }
 }
 
+/* The admin bar has five items, so it switches to the phone menu a little earlier than the visitor bar. */
+@media (max-width: 980px) {
+  .nav--admin { flex-wrap: wrap; padding: var(--space-2) var(--space-3); }
+  .nav--admin #menu-toggle { display: inline-flex; }
+  .nav--admin .nav-links { display: none; order: 3; width: 100%; flex-direction: column; align-items: stretch; padding-top: var(--space-2); }
+  .nav--admin.open .nav-links { display: flex; }
+  .nav--admin .nav-links a, .nav--admin .nav-links button { justify-content: flex-start; }
+}
+
 /* ---------- Layout ---------- */
 .page { width: min(1080px, 100% - 2 * var(--space-3)); margin: var(--space-6) auto; display: grid; gap: var(--space-5); }
 .page--narrow { width: min(680px, 100% - 2 * var(--space-3)); }

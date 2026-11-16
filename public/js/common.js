@@ -87,17 +87,17 @@
   }
 
   // ---------- Navigation ----------
-  function mountNav(active, mode = 'visitor') {
+   function mountNav(active, mode = 'visitor') {
     const links = mode === 'admin'
-      ? [['dashboard', 'admin/index.php', 'dash', 'Dashboard'], ['manage', 'admin/manage.php', 'list', 'Manage'], ['slideshow', 'slideshow.php', 'play', 'Slideshow']]
+      ? [['dashboard', 'admin/index.php', 'dash', 'Dashboard'], ['manage', 'admin/manage.php', 'list', 'Manage'], ['slideshow', 'slideshow.php', 'play', 'Slideshow'], ['visitor', 'index.php', 'upload', 'Visitor Page', true]]
       : [['share', 'index.php', 'upload', 'Share photos'], ['mine', 'my-photos.php', 'image', 'My photos'], ['slideshow', 'slideshow.php', 'play', 'Slideshow']];
     const nav = document.createElement('nav');
-    nav.className = 'nav'; nav.setAttribute('aria-label', 'Main');
+    nav.className = mode === 'admin' ? 'nav nav--admin' : 'nav'; nav.setAttribute('aria-label', 'Main');
     nav.innerHTML = `
       <a class="brand" href="${mode === 'admin' ? 'admin/index.php' : 'index.php'}">${icon('logo')}<span>Memory Wall</span></a>
       <button class="icon-btn" id="menu-toggle" aria-label="Open menu" aria-expanded="false">${icon('menu')}</button>
       <div class="nav-links" id="nav-links">
-        ${links.map(([id, href, ic, label]) => `<a href="${href}" ${id === active ? 'aria-current="page"' : ''}>${icon(ic)}<span>${label}</span></a>`).join('')}
+        ${links.map(([id, href, ic, label, newTab]) => `<a href="${href}" ${id === active ? 'aria-current="page"' : ''} ${newTab ? 'target="_blank" rel="noopener noreferrer"' : ''}>${icon(ic)}<span>${label}</span></a>`).join('')}
         ${mode === 'admin' ? `<button id="signout">${icon('logout')}<span>Sign out</span></button>` : ''}
         <button class="icon-btn" id="theme-toggle" aria-label="Switch colour theme"></button>
       </div>`;
