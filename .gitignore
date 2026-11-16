@@ -1,4 +1,5 @@
 # secrets and local settings
+config/config.php
 config/config.local.php
 .env
 # private visitor photos (the folder itself is kept by .gitkeep and .htaccess)
