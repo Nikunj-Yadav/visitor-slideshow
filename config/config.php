@@ -9,7 +9,7 @@
  */
 $config = [
     'db_host' => '127.0.0.1',
-    'db_port' => 3307,
+    'db_port' => 3306,
     'db_name' => 'visitor_slideshow',
     'db_user' => 'root',          // XAMPP default
     'db_pass' => '',              // XAMPP default (empty). Change it if you set a MySQL password.
